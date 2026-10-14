@@ -1,9 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>melody maker</title>
     <style>
         body{
             margin:0;
@@ -18,10 +14,9 @@
             transform:translate(-50%,0%);
             width:15vh;
             cursor:pointer;
-            background-color:rgb(204,0,153);
+            background-color:#c09;
             border-radius:1vh;
             border:none;
-            outline:none;
             padding:3vh;
             padding-left:4vh;
             opacity:0.5;
@@ -33,7 +28,6 @@
             position:absolute;
             font-family:"Brush Script MT",cursive;
             font-size:15vh;
-            letter-spacing:0.5vh;
             top:2vh;
             pointer-events:none;
             width:100vw;
@@ -43,7 +37,7 @@
 </head>
 <body>
     <canvas id="canvas"></canvas>
-    <button id="autoPlayButton" onclick="autoPlay()">
+    <button id="autoPlayButton">
         <svg viewBox="0 0 10 10">
             <polygon points="0 0 0 10 10 5 0 0" fill="white"/>
         </svg>
@@ -54,20 +48,20 @@
         let spacing;
         let clef;
         let marginLeft;
-        let blue="rgb(0,176,240)";
-        let purple="rgb(204,0,153)";
         let marginRight;
+        let blue="#00b0f0";
+        let purple="#c09";
         let movingNotes=[];
         let speed=0.005;
         let holdDuration=300;
-        let notes=["E6","D6","C6","B5","A5","G5","F5","E5","D5","C5","B4","A4","G4","F4","E4","D4","C4","B3","A3","G3","F3"]
+        let notes=["E6","D6","C6","B5","A5","G5","F5","E5","D5","C5","B4","A4","G4","F4","E4","D4","C4","B3","A3","G3","F3"];
         let audioContext;
-        let freq=[1318.5,1174.66,1046.5,987.767,880,783.991,698.456,659.255,587.33,523.251,493.883,436.04,392.44,349.228,329.628,293.665,261.626,246.942,220,195.998,174.614]
+        let freq=[1319,1175,1047,988,880,784,698,659,587,523,494,440,392,349,330,294,262,247,220,196,175];
         let mouse={
             x:0,
             y:0,
             isDown:false
-        }
+        };
         class Clef{
             constructor(){
                 this.start=0;
@@ -80,20 +74,17 @@
                 ctx.textAlign="center";
                 ctx.fillStyle=color;
                 ctx.fillText('\u{1D11E}',marginLeft,canvas.height/2+spacing*4-spacing*0.1);
-                ctx.textAlign="left";
             }
             draw(ctx){
                 this.drawGlyph(ctx,"black");
-                let now=new Date().getTime();
+                let now=Date.now();
                 if(this.start+this.dur>now){
                     let color=this.isAuto?purple:blue;
                     ctx.globalAlpha=1-(now-this.start)/this.dur;
                     ctx.shadowColor=color;
                     ctx.shadowBlur=spacing*1.5;
                     this.drawGlyph(ctx,"black");
-                    this.drawGlyph(ctx,"black");
                     ctx.shadowBlur=0;
-                    ctx.shadowColor="transparent";
                     ctx.globalAlpha=1;
                 }
             }
@@ -104,7 +95,7 @@
                     x:prop.x,
                     y:prop.y
                 }
-                this.born=new Date().getTime();
+                this.born=Date.now();
                 this.duration=prop.dur;
                 this.frequency=prop.freq;
                 this.isAuto=isAuto;
@@ -117,14 +108,8 @@
                 playNote(this.frequency,this.duration);
             }
             update(){
-                let timeDiff=new Date().getTime()-this.born;
-                let noteType=Math.floor(timeDiff/holdDuration);
-                switch(noteType){
-                    case 0:this.duration=0.5;break;
-                    case 1:this.duration=1;break;
-                    case 2:this.duration=2;break;
-                    case 3:this.duration=4;break;
-                }
+                let held=Math.floor((Date.now()-this.born)/holdDuration);
+                this.duration=[0.5,1,2,4][Math.min(held,3)];
             }
         }
         function main(){
@@ -136,10 +121,10 @@
         }
         function playNote(freq,duration){
             if(audioContext==null){
-                audioContext=new(AudioContext||webkitAudioContext||window.webkitAudioContext)();
+                audioContext=new(window.AudioContext||window.webkitAudioContext)();
             }
-            var osc=audioContext.createOscillator();
-            var gainNode=audioContext.createGain();
+            let osc=audioContext.createOscillator();
+            let gainNode=audioContext.createGain();
             gainNode.gain.setValueAtTime(0,audioContext.currentTime);
             gainNode.gain.linearRampToValueAtTime(0.4,audioContext.currentTime+0.05);
             gainNode.gain.linearRampToValueAtTime(0,audioContext.currentTime+duration);
@@ -160,8 +145,8 @@
                     i--;
                 }
             }
-            if(mouse.isDown==true&&movingNotes.length>0){
-                    movingNotes[movingNotes.length-1].update();
+            if(mouse.isDown&&movingNotes.length>0){
+                movingNotes[movingNotes.length-1].update();
             }
         }
         function animate(){
@@ -184,7 +169,6 @@
             spacing=canvas.height/20;
             marginLeft=canvas.width*0.2;
             marginRight=canvas.width*0.75;
-            drawScene();
         }
         function drawNotes(ctx,location,duration=0.5,color="black"){
             ctx.globalAlpha=Math.min(1,Math.abs(location.x-marginLeft)/marginLeft);
@@ -192,7 +176,6 @@
             ctx.strokeStyle=color;
             ctx.lineWidth=canvas.height*0.01;
             ctx.lineCap="round";
-            ctx.lineJoin="round";
             if(duration<=2){
                 ctx.beginPath();
                 ctx.moveTo(location.x+spacing,location.y);
@@ -228,7 +211,7 @@
             ctx.globalAlpha=1;
         }
         function glowClef(duration,isAuto){
-            clef.start=new Date().getTime();
+            clef.start=Date.now();
             clef.dur=duration*1000;
             clef.isAuto=isAuto;
         }
@@ -236,12 +219,12 @@
             mouse.x=e.x;
             mouse.y=e.y;
         }
-        function onMouseDown(e){
+        function onMouseDown(){
             mouse.isDown=true;
             let prop=getNoteAtLocation(mouse);
             movingNotes.push(new MovingNote(prop));
         }
-        function onMouseUp(e){
+        function onMouseUp(){
             mouse.isDown=false;
         }
         function getNoteAtLocation(location){
@@ -254,12 +237,7 @@
             }
         }
         function autoNotesExist(){
-            for(let i=0;i<movingNotes.length;i++){
-                if(movingNotes[i].isAuto==true){
-                    return true;
-                }
-            }
-            return false;
+            return movingNotes.some(note=>note.isAuto);
         }
         function addAutoNote(note,dur,offset){
             let fr=freq[notes.indexOf(note)];
@@ -303,14 +281,15 @@
                 ctx.stroke();
             }
             clef.draw(ctx);
-            if(mouse!=null&&mouse.isDown==false){
+            if(!mouse.isDown){
                 drawNotes(ctx,getNoteAtLocation(mouse));
             }
             for(let i=0;i<movingNotes.length;i++){
                 movingNotes[i].draw(ctx);
             }
         }
-    main();
+        document.getElementById("autoPlayButton").onclick=autoPlay;
+        main();
     </script>
 </body>
 </html>
