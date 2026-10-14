@@ -14,12 +14,18 @@
     <canvas id="canvas"></canvas>
     <script>
         let canvas;
-        let scene;
         let spacing;
         let clef;
         let marginLeft;
         let blue="rgb(0,176,240)";
         let purple="rgb(204,0,153)";
+        let marginRight;
+        let movingNotes=[];
+        let speed=0.005;
+        let holdDuration=300;
+        let notes=["E6","D6","C6","B5","A5","G5","F5","E5","D5","C5","B4","A4","G4","F4","E4","D4","C4","B3","A3","G3","F3"]
+        let audioContext;
+        let freq=[1318.5,1174.66,1046.5,987.767,880,783.991,698.456,659.255,587.33,523.251,493.883,436.04,392.44,349.228,329.628,293.665,261.626,246.942,220,195.998,174.614]
         let mouse={
             x:0,
             y:0,
@@ -55,16 +61,60 @@
                 }
             }
         }
+        class MovingNote{
+            constructor(prop,isAuto=false){
+                this.location={
+                    x:prop.x,
+                    y:prop.y
+                }
+                this.born=new Date().getTime();
+                this.duration=prop.dur;
+                this.frequency=prop.freq;
+                this.isAuto=isAuto;
+            }
+            draw(ctx){
+                drawNotes(ctx,this.location);
+            }
+            play(){
+                playNote(this.frequency,this.duration);
+            }
+        }
         function main(){
             canvas=document.getElementById('canvas');
             clef=new Clef();
             fitToScreen();
             addEventListeners();
-            window.addEventListener('resize',fitToScreen);
-            drawScene();
             animate();
         }
+        function playNote(freq,duration){
+            if(audioContext==null){
+                audioContext=new(AudioContext||webkitAudioContext||window.webkitAudioContext)();
+            }
+            var osc=audioContext.createOscillator();
+            var gainNode=audioContext.createGain();
+            gainNode.gain.setValueAtTime(0,audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.4,audioContext.currentTime+0.05);
+            gainNode.gain.linearRampToValueAtTime(0,audioContext.currentTime+duration);
+            osc.type="triangle";
+            osc.frequency.value=freq;
+            osc.start(audioContext.currentTime);
+            osc.stop(audioContext.currentTime+duration);
+            osc.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+        }
+        function updateMovingNotes(){
+            for(let i=0;i<movingNotes.length;i++){
+                movingNotes[i].location.x-=speed*canvas.width;
+                if(movingNotes[i].location.x<=marginLeft){
+                    movingNotes[i].play();
+                    glowClef(movingNotes[i].duration,movingNotes[i].isAuto);
+                    movingNotes.splice(i,1);
+                    i--;
+                }
+            }
+        }
         function animate(){
+            updateMovingNotes();
             drawScene();
             window.requestAnimationFrame(animate);
         }
@@ -79,6 +129,7 @@
             canvas.height=window.innerHeight;
             spacing=canvas.height/20;
             marginLeft=canvas.width*0.2;
+            marginRight=canvas.width*0.75;
             drawScene();
         }
         function drawNotes(ctx,location){
@@ -122,10 +173,20 @@
         }
         function onMouseDown(e){
             mouse.isDown=true;
-            glowClef(0.5,false);
+            let prop=getNoteAtLocation(mouse);
+            movingNotes.push(new MovingNote(prop));
         }
         function onMouseUp(e){
             mouse.isDown=false;
+        }
+        function getNoteAtLocation(location){
+            let index=Math.round(location.y/spacing);
+            return{
+                x:marginRight,
+                y:index*spacing,
+                freq:freq[index],
+                dur:0.5
+            }
         }
         function drawScene(){
             let ctx=canvas.getContext('2d');
@@ -140,11 +201,12 @@
                 ctx.stroke();
             }
             clef.draw(ctx);
-            let location={
-                x:canvas.width/2,
-                y:canvas.height/2
+            if(mouse!=null&&mouse.isDown==false){
+                drawNotes(ctx,getNoteAtLocation(mouse));
             }
-            drawNotes(ctx,mouse);
+            for(let i=0;i<movingNotes.length;i++){
+                movingNotes[i].draw(ctx);
+            }
         }
     main();
     </script>
