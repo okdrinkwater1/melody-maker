@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>melody maker</title>
+    <style>
+        body{
+            margin:0;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        let canvas;
+        let scene;
+        let spacing;
+        function main(){
+            canvas=document.getElementById('canvas');
+            fitToScreen();
+            window.addEventListener('resize',fitToScreen);
+            drawScene();
+        }
+        function fitToScreen(){
+            canvas.width=window.innerWidth;
+            canvas.height=window.innerHeight;
+            spacing=canvas.height/20;
+            drawScene();
+        }
+        function drawNotes(ctx,location){
+            ctx.fillStyle="black";
+            ctx.strokeStyle="black";
+            ctx.lineWidth=1;
+            ctx.beginPath();
+            ctx.moveTo(location.x+spacing,location.y);
+            ctx.lineTo(location.x+spacing,location.y-spacing*5);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(location.x+spacing,location.y-spacing*5);
+            ctx.bezierCurveTo(
+                location.x+spacing*2,location.y-spacing*3,
+                location.x+spacing*2.5,location.y-spacing*3,
+            location.x+spacing*2.5,location.y-spacing*1);
+            ctx.bezierCurveTo(
+                location.x+spacing*2.5,location.y-spacing*2.7,
+                location.x+spacing*2,location.y-spacing*2.7,
+                location.x+spacing,location.y-spacing*4.5);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.save();
+            ctx.translate(location.x,location.y);
+            ctx.rotate(-0.2);
+            ctx.scale(1.08,0.75);
+            ctx.arc(0,0,spacing,0,Math.PI*2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+        function drawClef(ctx){
+            const size=spacing*2*5.7;
+            const bottomLine=canvas.height/2+spacing*4;
+            ctx.fillStyle="black";
+            ctx.font=size+'px "Segoe UI Symbol","Noto Music",serif';
+            ctx.fillText('\u{1D11E}',spacing,bottomLine-spacing*0.1);
+        }
+        function drawScene(){
+            let ctx=canvas.getContext('2d');
+            ctx.strokeStyle="black";
+            ctx.lineWidth=1;
+            for(let i=-2;i<=2;i++){
+                let y=canvas.height/2+i*spacing*2;
+                ctx.beginPath();
+                ctx.moveTo(0,y);
+                ctx.lineTo(canvas.width,y);
+                ctx.stroke();
+            }
+            drawClef(ctx);
+            let location={
+                x:canvas.width/2,
+                y:canvas.height/2
+            }
+            drawNotes(ctx,location);
+        }
+    main();
+    </script>
+</body>
+</html>
