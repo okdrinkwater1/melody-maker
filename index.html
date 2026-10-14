@@ -8,10 +8,36 @@
         body{
             margin:0;
         }
+        canvas{
+            display:block;
+        }
+        button{
+            position:absolute;
+            bottom:10vh;
+            left:50%;
+            transform:translate(-50%,0%);
+            width:15vh;
+            cursor:pointer;
+            background-color:rgb(204,0,153);
+            border-radius:1vh;
+            border:none;
+            outline:none;
+            padding:3vh;
+            padding-left:4vh;
+            opacity:0.5;
+        }
+        button:hover{
+            opacity:1;
+        }
     </style>
 </head>
 <body>
     <canvas id="canvas"></canvas>
+    <button id="autoPlayButton" onclick="autoPlay()">
+        <svg viewBox="0 0 10 10">
+            <polygon points="0 0 0 10 10 5 0 0" fill="white"/>
+        </svg>
+    </button>
     <script>
         let canvas;
         let spacing;
@@ -73,10 +99,21 @@
                 this.isAuto=isAuto;
             }
             draw(ctx){
-                drawNotes(ctx,this.location);
+                let color=this.isAuto?purple:blue;
+                drawNotes(ctx,this.location,this.duration,color);
             }
             play(){
                 playNote(this.frequency,this.duration);
+            }
+            update(){
+                let timeDiff=new Date().getTime()-this.born;
+                let noteType=Math.floor(timeDiff/holdDuration);
+                switch(noteType){
+                    case 0:this.duration=0.5;break;
+                    case 1:this.duration=1;break;
+                    case 2:this.duration=2;break;
+                    case 3:this.duration=4;break;
+                }
             }
         }
         function main(){
@@ -112,10 +149,16 @@
                     i--;
                 }
             }
+            if(mouse.isDown==true&&movingNotes.length>0){
+                    movingNotes[movingNotes.length-1].update();
+            }
         }
         function animate(){
             updateMovingNotes();
             drawScene();
+            if(!autoNotesExist()){
+                document.getElementById("autoPlayButton").style.backgroundColor=purple;
+            }
             window.requestAnimationFrame(animate);
         }
         function addEventListeners(){
@@ -132,35 +175,46 @@
             marginRight=canvas.width*0.75;
             drawScene();
         }
-        function drawNotes(ctx,location){
-            ctx.fillStyle="black";
-            ctx.strokeStyle="black";
-            ctx.lineWidth=1;
-            ctx.beginPath();
-            ctx.moveTo(location.x+spacing,location.y);
-            ctx.lineTo(location.x+spacing,location.y-spacing*5);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(location.x+spacing,location.y-spacing*5);
-            ctx.bezierCurveTo(
+        function drawNotes(ctx,location,duration=0.5,color="black"){
+            ctx.globalAlpha=Math.min(1,Math.abs(location.x-marginLeft)/marginLeft);
+            ctx.fillStyle=color;
+            ctx.strokeStyle=color;
+            ctx.lineWidth=canvas.height*0.01;
+            ctx.lineCap="round";
+            ctx.lineJoin="round";
+            if(duration<=2){
+                ctx.beginPath();
+                ctx.moveTo(location.x+spacing,location.y);
+                ctx.lineTo(location.x+spacing,location.y-spacing*5);
+                ctx.stroke();
+            }
+            if(duration==0.5){
+                ctx.beginPath();
+                ctx.moveTo(location.x+spacing,location.y-spacing*5);
+                ctx.bezierCurveTo(
                 location.x+spacing*2,location.y-spacing*3,
                 location.x+spacing*2.5,location.y-spacing*3,
-            location.x+spacing*2.5,location.y-spacing*1);
-            ctx.bezierCurveTo(
+                location.x+spacing*2.5,location.y-spacing*1);
+                ctx.bezierCurveTo(
                 location.x+spacing*2.5,location.y-spacing*2.7,
                 location.x+spacing*2,location.y-spacing*2.7,
                 location.x+spacing,location.y-spacing*4.5);
-            ctx.closePath();
-            ctx.fill();
+                ctx.stroke();
+                ctx.fill();
+            }
+            if(duration>=2){
+                ctx.fillStyle="white";
+            }
             ctx.beginPath();
             ctx.save();
             ctx.translate(location.x,location.y);
             ctx.rotate(-0.2);
-            ctx.scale(1.08,0.75);
+            ctx.scale(1.05,0.8);
             ctx.arc(0,0,spacing,0,Math.PI*2);
-            ctx.fill();
             ctx.stroke();
+            ctx.fill();
             ctx.restore();
+            ctx.globalAlpha=1;
         }
         function glowClef(duration,isAuto){
             clef.start=new Date().getTime();
@@ -186,6 +240,43 @@
                 y:index*spacing,
                 freq:freq[index],
                 dur:0.5
+            }
+        }
+        function autoNotesExist(){
+            for(let i=0;i<movingNotes.length;i++){
+                if(movingNotes[i].isAuto==true){
+                    return true;
+                }
+            }
+            return false;
+        }
+        function addAutoNote(note,dur,offset){
+            let fr=freq[notes.indexOf(note)];
+            let y=(freq.indexOf(fr))*spacing;
+            let prop={
+                x:canvas.width+offset,
+                y:y,
+                freq:fr,
+                dur:dur
+            }
+            movingNotes.push(new MovingNote(prop,true));
+        }
+        function autoPlay(){
+            if(!autoNotesExist()){
+                addAutoNote("F4",0.5,0*canvas.width*speed);
+                addAutoNote("G4",0.5,20*canvas.width*speed);
+                addAutoNote("G4",0.5,40*canvas.width*speed);
+                addAutoNote("A4",2,60*canvas.width*speed);
+                addAutoNote("G4",0.5,140*canvas.width*speed);
+                addAutoNote("F4",0.5,160*canvas.width*speed);
+                addAutoNote("G4",0.5,180*canvas.width*speed);
+                addAutoNote("C5",2,200*canvas.width*speed);
+                addAutoNote("A4",0.5,280*canvas.width*speed);
+                addAutoNote("G4",0.5,300*canvas.width*speed);
+                addAutoNote("F4",1,320*canvas.width*speed);
+                addAutoNote("D4",2,380*canvas.width*speed);
+                addAutoNote("C4",2,460*canvas.width*speed);
+                document.getElementById("autoPlayButton").style.backgroundColor="gray";
             }
         }
         function drawScene(){
